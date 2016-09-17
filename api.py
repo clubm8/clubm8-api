@@ -133,6 +133,15 @@ class SlotResource(NamespacedModelResource):
 
 
 class NewsResource(NamespacedModelResource):
+    """The NewsResource provides a list of news as well as details of a single
+    news entry.
+
+    Filtering criteria:
+        limit (int): The maximum number of news to deliver
+        since (date): The date of the first entry to deliver
+        until (date): The date of the last entry to deliver
+    """
+
     author = CharField(attribute='author__get_full_name', default='nobody')
 
     class Meta:
