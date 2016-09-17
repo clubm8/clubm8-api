@@ -73,7 +73,8 @@ class PlanResource(NamespacedModelResource):
         if filters is None:
             filters = {}
 
-        orm_filters = super(PlanResource, self).build_filters(filters, **kwargs)
+        orm_filters = super(PlanResource, self).build_filters(filters,
+                                                              **kwargs)
 
         queryset = Q(id__gte=0)
 
@@ -84,13 +85,14 @@ class PlanResource(NamespacedModelResource):
         orm_filters.update({'custom': queryset})
         return orm_filters
 
-    def apply_filters(self, request, applicable_filters):
-        if 'custom' in applicable_filters:
-            custom = applicable_filters.pop('custom')
+    def apply_filters(self, request, filters):
+        if 'custom' in filters:
+            custom = filters.pop('custom')
         else:
             custom = None
 
-        prefiltered = super(PlanResource, self).apply_filters(request, applicable_filters)
+        prefiltered = super(PlanResource, self).apply_filters(request,
+                                                              filters)
         return prefiltered.filter(custom) if custom else prefiltered
 
 
@@ -103,7 +105,8 @@ class SlotResource(NamespacedModelResource):
         if filters is None:
             filters = {}
 
-        orm_filters = super(SlotResource, self).build_filters(filters, **kwargs)
+        orm_filters = super(SlotResource, self).build_filters(filters,
+                                                              **kwargs)
 
         queryset = Q(id__gte=0)
 
@@ -118,13 +121,14 @@ class SlotResource(NamespacedModelResource):
         orm_filters.update({'custom': queryset})
         return orm_filters
 
-    def apply_filters(self, request, applicable_filters):
-        if 'custom' in applicable_filters:
-            custom = applicable_filters.pop('custom')
+    def apply_filters(self, request, filters):
+        if 'custom' in filters:
+            custom = filters.pop('custom')
         else:
             custom = None
 
-        prefiltered = super(SlotResource, self).apply_filters(request, applicable_filters)
+        prefiltered = super(SlotResource, self).apply_filters(request,
+                                                              filters)
         return prefiltered.filter(custom) if custom else prefiltered
 
 
@@ -134,16 +138,13 @@ class NewsResource(NamespacedModelResource):
     class Meta:
         queryset = models.News.objects.all().distinct()
         resource_name = 'news'
-        filtering = {
-            'date': ['exact', 'range'],
-            'author': ALL,
-        }
 
     def build_filters(self, filters=None, **kwargs):
         if filters is None:
             filters = {}
 
-        orm_filters = super(NewsResource, self).build_filters(filters, **kwargs)
+        orm_filters = super(NewsResource, self).build_filters(filters,
+                                                              **kwargs)
 
         queryset = Q(id__gte=0)
 
@@ -158,11 +159,12 @@ class NewsResource(NamespacedModelResource):
         orm_filters.update({'custom': queryset})
         return orm_filters
 
-    def apply_filters(self, request, applicable_filters):
-        if 'custom' in applicable_filters:
-            custom = applicable_filters.pop('custom')
+    def apply_filters(self, request, filters):
+        if 'custom' in filters:
+            custom = filters.pop('custom')
         else:
             custom = None
 
-        prefiltered = super(NewsResource, self).apply_filters(request, applicable_filters)
+        prefiltered = super(NewsResource, self).apply_filters(request,
+                                                              filters)
         return prefiltered.filter(custom) if custom else prefiltered
