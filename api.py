@@ -65,7 +65,7 @@ class PlanResource(NamespacedModelResource):
 
     class Meta:
         queryset = models.Plan.objects.all().distinct()
-        resources = 'plan'
+        resources_name = 'plan'
         filtering = {
             'occurences': ALL_WITH_RELATIONS,
         }
@@ -73,5 +73,15 @@ class PlanResource(NamespacedModelResource):
 
 class SlotResource(NamespacedModelResource):
     class Meta:
-        slot = models.Slot.objects.all().distinct()
+        queryset = models.Slot.objects.all().distinct()
         resource_name = 'slot'
+
+
+class NewsResource(NamespacedModelResource):
+    class Meta:
+        queryset = models.News.objects.all().distinct()
+        resource_name = 'news'
+        filtering = {
+            'date': ['exact', 'range'],
+            'author': ALL,
+        }

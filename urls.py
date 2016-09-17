@@ -1,5 +1,6 @@
 from tastypie.api import NamespacedApi
 from clubm8api.api import (EventResource,
+                           NewsResource,
                            PlanResource,
                            OccurenceResource,
                            SlotResource,
@@ -11,6 +12,7 @@ app_name = 'clubm8api'
 
 api = NamespacedApi(api_name='v1', urlconf_namespace=app_name)
 api.register(EventResource())
+api.register(NewsResource())
 api.register(PlanResource())
 api.register(OccurenceResource())
 api.register(SlotResource())
