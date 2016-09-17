@@ -2,7 +2,7 @@ from django.db.models import Q
 from django.utils.dateparse import parse_date
 from tastypie.authentication import ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
-from tastypie.fields import ToManyField, ForeignKey
+from tastypie.fields import ToManyField, ForeignKey, CharField
 from tastypie.resources import NamespacedModelResource, ALL, ALL_WITH_RELATIONS
 
 from clubm8core import models
@@ -68,9 +68,30 @@ class PlanResource(NamespacedModelResource):
     class Meta:
         queryset = models.Plan.objects.all().distinct()
         resources_name = 'plan'
-        filtering = {
-            'occurences': ALL_WITH_RELATIONS,
-        }
+
+    def build_filters(self, filters=None, **kwargs):
+        if filters is None:
+            filters = {}
+
+        orm_filters = super(PlanResource, self).build_filters(filters, **kwargs)
+
+        queryset = Q(id__gte=0)
+
+        if 'tags' in filters:
+            tags = filters['tags']
+            queryset = queryset & Q(occurence__event__tag__in=tags.split(','))
+
+        orm_filters.update({'custom': queryset})
+        return orm_filters
+
+    def apply_filters(self, request, applicable_filters):
+        if 'custom' in applicable_filters:
+            custom = applicable_filters.pop('custom')
+        else:
+            custom = None
+
+        prefiltered = super(PlanResource, self).apply_filters(request, applicable_filters)
+        return prefiltered.filter(custom) if custom else prefiltered
 
 
 class SlotResource(NamespacedModelResource):
@@ -78,11 +99,11 @@ class SlotResource(NamespacedModelResource):
         queryset = models.Slot.objects.all().distinct()
         resource_name = 'slot'
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         if filters is None:
             filters = {}
 
-        orm_filters = super(SlotResource, self).build_filters(filters)
+        orm_filters = super(SlotResource, self).build_filters(filters, **kwargs)
 
         queryset = Q(id__gte=0)
 
@@ -107,8 +128,9 @@ class SlotResource(NamespacedModelResource):
         return prefiltered.filter(custom) if custom else prefiltered
 
 
-
 class NewsResource(NamespacedModelResource):
+    author = CharField(attribute='author__get_full_name', default='nobody')
+
     class Meta:
         queryset = models.News.objects.all().distinct()
         resource_name = 'news'
@@ -117,11 +139,11 @@ class NewsResource(NamespacedModelResource):
             'author': ALL,
         }
 
-    def build_filters(self, filters=None):
+    def build_filters(self, filters=None, **kwargs):
         if filters is None:
             filters = {}
 
-        orm_filters = super(NewsResource, self).build_filters(filters)
+        orm_filters = super(NewsResource, self).build_filters(filters, **kwargs)
 
         queryset = Q(id__gte=0)
 
@@ -144,4 +166,3 @@ class NewsResource(NamespacedModelResource):
 
         prefiltered = super(NewsResource, self).apply_filters(request, applicable_filters)
         return prefiltered.filter(custom) if custom else prefiltered
-
