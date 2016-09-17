@@ -1,3 +1,5 @@
+from django.db.models import Q
+from django.utils.dateparse import parse_date
 from tastypie.authentication import ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.fields import ToManyField, ForeignKey
@@ -76,6 +78,35 @@ class SlotResource(NamespacedModelResource):
         queryset = models.Slot.objects.all().distinct()
         resource_name = 'slot'
 
+    def build_filters(self, filters=None):
+        if filters is None:
+            filters = {}
+
+        orm_filters = super(SlotResource, self).build_filters(filters)
+
+        queryset = Q(id__gte=0)
+
+        if 'from' in filters:
+            frm = filters['from']
+            queryset = queryset & Q(start__gte=parse_date(frm))
+
+        if 'to' in filters:
+            to = filters['to']
+            queryset = queryset & Q(start__lte=parse_date(to))
+
+        orm_filters.update({'custom': queryset})
+        return orm_filters
+
+    def apply_filters(self, request, applicable_filters):
+        if 'custom' in applicable_filters:
+            custom = applicable_filters.pop('custom')
+        else:
+            custom = None
+
+        prefiltered = super(SlotResource, self).apply_filters(request, applicable_filters)
+        return prefiltered.filter(custom) if custom else prefiltered
+
+
 
 class NewsResource(NamespacedModelResource):
     class Meta:
@@ -85,3 +116,32 @@ class NewsResource(NamespacedModelResource):
             'date': ['exact', 'range'],
             'author': ALL,
         }
+
+    def build_filters(self, filters=None):
+        if filters is None:
+            filters = {}
+
+        orm_filters = super(NewsResource, self).build_filters(filters)
+
+        queryset = Q(id__gte=0)
+
+        if 'since' in filters:
+            since = filters['since']
+            queryset = queryset & Q(date__gte=parse_date(since))
+
+        if 'until' in filters:
+            until = filters['until']
+            queryset = queryset & Q(date__lte=parse_date(until))
+
+        orm_filters.update({'custom': queryset})
+        return orm_filters
+
+    def apply_filters(self, request, applicable_filters):
+        if 'custom' in applicable_filters:
+            custom = applicable_filters.pop('custom')
+        else:
+            custom = None
+
+        prefiltered = super(NewsResource, self).apply_filters(request, applicable_filters)
+        return prefiltered.filter(custom) if custom else prefiltered
+
