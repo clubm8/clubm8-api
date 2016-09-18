@@ -2,6 +2,35 @@ from ddt import ddt, data
 from django.test import TestCase
 from tastypie.test import ResourceTestCaseMixin
 
+class AnnotatedDict(dict):
+    pass
+
+def annotate_filter_test(data):
+    obj = AnnotatedDict(data)
+
+    annotation = 'WITH'
+
+    idx = 0
+    for k, v in sorted(obj['filter'].items()):
+        annotation += '_PARAM_{}_IS_{}'.format(k, v)
+        idx += 1
+        if idx < len(obj['filter'].items()):
+            annotation += '_AND'
+
+    idx = 0
+    if obj['valid']:
+        annotation += '_EXPECTS'
+        for k, v in sorted(obj['expected'].items()):
+            annotation += '_{}_IS_{}'.format(k, v)
+            idx += 1
+            if idx < len(obj['expected'].items()):
+                annotation += '_AND'
+    else:
+        annotation += '_MUST_RETURN_ERROR'
+
+    setattr(obj, '__name__', annotation)
+    return obj
+
 FILTER_DATA = [
     {
         'valid': True,
@@ -119,6 +148,17 @@ FILTER_DATA = [
             'count': 2,
         }
     },
+    {
+        'valid': True,
+        'filter': {
+            'tags': '1',
+            'from': '2016-09-30',
+            'to': '2016-10-23',
+        },
+        'expected': {
+            'count': 1,
+        }
+    },
 ]
 
 
@@ -155,7 +195,7 @@ class SlotResourceTest(ResourceTestCaseMixin, TestCase):
             'start',
         ])
 
-    @data(*FILTER_DATA)
+    @data(*map(annotate_filter_test, FILTER_DATA))
     def test_get_list_filter(self, value):
         response = self.api_client.get(
             uri='/api/v1/slot/',
