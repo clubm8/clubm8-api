@@ -1,9 +1,14 @@
+from django.conf.urls import url
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
+from django.http import HttpResponseGone, HttpResponseBadRequest
 from django.utils.dateparse import parse_date
 from tastypie.authentication import ApiKeyAuthentication
 from tastypie.authorization import DjangoAuthorization
 from tastypie.fields import ToManyField, ForeignKey, CharField
 from tastypie.resources import NamespacedModelResource, ALL, ALL_WITH_RELATIONS
+from tastypie.utils import trailing_slash
+from datetime import datetime, timedelta
 
 from clubm8core import models
 
@@ -97,6 +102,19 @@ class PlanResource(NamespacedModelResource):
 
 
 class SlotResource(NamespacedModelResource):
+    """The SlotResource provides a list of slots as well as details of a
+    single slot entry.
+
+    Filtering criteria:
+        limit (int): The maximum number of slots to deliver
+        from (date): The start date of the first entry to deliver
+        to (date): The start date of the last entry to deliver
+        tags (list[int]): A set of tags that. An entry must have at least one
+            of these tags to be included in the list.
+    """
+
+    plan = ForeignKey(PlanResource, 'plan')
+
     class Meta:
         queryset = models.Slot.objects.all().distinct()
         resource_name = 'slot'
@@ -111,12 +129,16 @@ class SlotResource(NamespacedModelResource):
         queryset = Q(id__gte=0)
 
         if 'from' in filters:
-            frm = filters['from']
-            queryset = queryset & Q(start__gte=parse_date(frm))
+            frm = parse_date(filters['from'])
+            queryset = queryset & Q(start__gte=frm)
 
         if 'to' in filters:
-            to = filters['to']
-            queryset = queryset & Q(start__lte=parse_date(to))
+            to = parse_date(filters['to'])
+            queryset = queryset & Q(start__lte=to)
+
+        if 'tags' in filters:
+            tags = filters['tags'].split(',')
+            queryset = queryset & Q(plan__occurence__event__tag__in=tags)
 
         orm_filters.update({'custom': queryset})
         return orm_filters
@@ -130,6 +152,34 @@ class SlotResource(NamespacedModelResource):
         prefiltered = super(SlotResource, self).apply_filters(request,
                                                               filters)
         return prefiltered.filter(custom) if custom else prefiltered
+
+    def prepend_urls(self):
+        return [
+            url(r'^(?P<resource_name>{})/current{}$'.format(
+                self._meta.resource_name, trailing_slash()
+            ), self.wrap_view('get_current'), name="api_get_current"),
+        ]
+
+    def get_current(self, request, **kwargs):
+        today = datetime.now().date()
+        week = today - timedelta(today.weekday())
+        print(week)
+
+        try:
+            bundle = self.build_bundle(request=request)
+            kwargs['from'] = str(week)
+            kwargs['to'] = str(week)
+            slot = self.cached_obj_get(
+                bundle=bundle,
+                **self.remove_api_resource_names(kwargs)
+            )
+        except ObjectDoesNotExist:
+            return HttpResponseGone()
+        except MultipleObjectsReturned:
+            return HttpResponseBadRequest("More than one resource found.")
+
+        data = self.full_dehydrate(self.build_bundle(obj=slot))
+        return self.create_response(request=request, data=data)
 
 
 class NewsResource(NamespacedModelResource):
